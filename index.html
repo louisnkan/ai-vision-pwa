@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>VisionX AI</title>
+<meta name="theme-color" content="#09090B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VisionX">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  :root {
+    --bg: #09090B;
+    --slate: #18181B;
+    --border: #27272A;
+    --cyan: #06B6D4;
+    --emerald: #10B981;
+    --white: #FAFAFA;
+    --silver: #A1A1AA;
+    --glow: 0 0 16px rgba(6, 182, 212, 0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--white);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+  .app { width: 100%; max-width: 440px; height: 100dvh; margin: 0 auto; display: flex; flex-direction: column;
+    background: var(--bg); position: relative; }
+
+  header { background: var(--slate); border-bottom: 1px solid var(--border);
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; flex-shrink: 0; }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand h1 { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
+  .brand h1 span { color: var(--cyan); }
+  .brand p { font-size: 11px; color: var(--silver); margin-top: 2px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--silver); white-space: nowrap; }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--silver); }
+  .badge.loading .dot { background: var(--cyan); animation: pulse 1s ease-in-out infinite; }
+  .badge.ready { color: var(--white); }
+  .badge.ready .dot { background: var(--emerald); box-shadow: 0 0 10px rgba(16, 185, 129, 0.7); }
+  .badge.live { color: var(--white); border-color: var(--cyan); box-shadow: var(--glow); }
+  .badge.live .dot { background: var(--cyan); animation: pulse 1s ease-in-out infinite; }
+  .badge.error { color: #F87171; }
+  .badge.error .dot { background: #F87171; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+
+  main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 14px 14px 8px; }
+  .viewport { position: relative; width: 100%; max-height: 100%; aspect-ratio: 3 / 4; border-radius: 20px; overflow: hidden;
+    background: #000; border: 1px solid var(--border); }
+  .viewport.active { border-color: var(--cyan); box-shadow: var(--glow); }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  canvas { pointer-events: none; }
+
+  .placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 28px; text-align: center; color: var(--silver); font-size: 14px; line-height: 1.5; }
+  .placeholder svg { width: 64px; height: 64px; stroke: var(--cyan); filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.5)); }
+  .placeholder.hidden { display: none; }
+
+  .counter { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(24, 24, 27, 0.88);
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.8px;
+    color: var(--white); display: none; align-items: center; gap: 8px; white-space: nowrap; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .counter.show { display: inline-flex; }
+  .counter b { color: var(--cyan); font-size: 15px; }
+  .counter.hot b { color: var(--emerald); }
+
+  .controls { background: var(--slate); border-top: 1px solid var(--border);
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
+  .cta { width: 100%; border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 800; letter-spacing: 0.3px;
+    background: var(--cyan); color: var(--bg); box-shadow: var(--glow); cursor: pointer; transition: transform 0.1s ease, opacity 0.2s ease; }
+  .cta:active { transform: scale(0.98); }
+  .cta:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
+  .cta.stop { background: transparent; color: var(--cyan); border: 2px solid var(--cyan); }
+  .hint { margin-top: 10px; text-align: center; font-size: 11px; color: var(--silver); min-height: 14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Vision<span>X</span> AI</h1>
+      <p>Live object detection</p>
+    </div>
+    <div class="badge loading" id="badge"><span class="dot"></span><span id="badgeText">Loading Neural Model...</span></div>
+  </header>
+
+  <main>
+    <div class="viewport" id="viewport">
+      <video id="video" playsinline muted autoplay></video>
+      <canvas id="canvas"></canvas>
+      <div class="placeholder" id="placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>
+          <circle cx="12" cy="12" r="3.5"/>
+        </svg>
+        <div id="placeholderText">Tap <strong style="color:#FAFAFA">Start AI Vision</strong> to open the rear camera and detect objects in real time.</div>
+      </div>
+      <div class="counter" id="counter"><span>TRACKING</span><b id="countNum">0</b><span id="countLabel">OBJECTS</span></div>
+    </div>
+  </main>
+
+  <div class="controls">
+    <button class="cta" id="cta" disabled>Start AI Vision</button>
+    <div class="hint" id="hint">Detects 80 everyday object types, fully on-device.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+<script>
+(function () {
+  'use strict';
+
+  var CYAN = '#06B6D4', EMERALD = '#10B981', VOID = '#09090B';
+  var MIN_SCORE = 0.55, HIGH_SCORE = 0.80;
+
+  var video = document.getElementById('video');
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var viewport = document.getElementById('viewport');
+  var placeholder = document.getElementById('placeholder');
+  var placeholderText = document.getElementById('placeholderText');
+  var badge = document.getElementById('badge');
+  var badgeText = document.getElementById('badgeText');
+  var cta = document.getElementById('cta');
+  var hint = document.getElementById('hint');
+  var counter = document.getElementById('counter');
+  var countNum = document.getElementById('countNum');
+  var countLabel = document.getElementById('countLabel');
+
+  var model = null, stream = null, running = false, rafId = 0, wakeLock = null, lastCount = -1;
+
+  function setBadge(state, text) {
+    badge.className = 'badge ' + state;
+    badgeText.textContent = text;
+  }
+
+  function setCount(n, anyHigh) {
+    if (n === lastCount) { counter.classList.toggle('hot', anyHigh); return; }
+    lastCount = n;
+    countNum.textContent = n;
+    countLabel.textContent = n === 1 ? 'OBJECT' : 'OBJECTS';
+    counter.classList.toggle('hot', anyHigh);
+  }
+
+  /* ---------- Model ---------- */
+  function loadModel() {
+    if (typeof cocoSsd === 'undefined' || typeof tf === 'undefined') {
+      setBadge('error', 'Model failed to load');
+      hint.textContent = 'Could not reach the AI libraries. Check your connection and reload.';
+      return;
+    }
+    cocoSsd.load().then(function (m) {
+      model = m;
+      setBadge('ready', 'AI Vision Ready');
+      cta.disabled = false;
+    }).catch(function (err) {
+      console.error(err);
+      setBadge('error', 'Model failed to load');
+      hint.textContent = 'Could not download the model. Check your connection and reload.';
+    });
+  }
+
+  /* ---------- Camera ---------- */
+  function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Promise.reject(new Error('NO_MEDIA'));
+    }
+    return navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 960 }, aspectRatio: { ideal: 3 / 4 } }
+    }).then(function (s) {
+      stream = s;
+      video.srcObject = s;
+      return new Promise(function (resolve) {
+        if (video.readyState >= 1 && video.videoWidth) return resolve();
+        video.onloadedmetadata = function () { resolve(); };
+      });
+    }).then(function () {
+      syncCanvas();
+      return video.play();
+    });
+  }
+
+  function syncCanvas() {
+    if (video.videoWidth && (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight)) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+  }
+  video.addEventListener('loadedmetadata', syncCanvas);
+  video.addEventListener('resize', syncCanvas);
+
+  function stopCamera() {
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    video.srcObject = null;
+  }
+
+  function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+  function releaseWakeLock() {
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+  }
+
+  /* ---------- Drawing ---------- */
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function drawPrediction(p, k) {
+    var x = p.bbox[0], y = p.bbox[1], w = p.bbox[2], h = p.bbox[3];
+    var high = p.score > HIGH_SCORE;
+    var color = high ? EMERALD : CYAN;
+    var glow = high ? 'rgba(16, 185, 129, 0.5)' : 'rgba(6, 182, 212, 0.45)';
+    var lw = 3 * k;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    // Main box with neon glow
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 16 * k;
+    ctx.strokeRect(x, y, w, h);
+
+    // Bold corner accents
+    var cl = Math.max(12 * k, Math.min(w, h) * 0.22);
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = lw * 1.9;
+    ctx.beginPath();
+    ctx.moveTo(x, y + cl); ctx.lineTo(x, y); ctx.lineTo(x + cl, y);
+    ctx.moveTo(x + w - cl, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cl);
+    ctx.moveTo(x + w, y + h - cl); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - cl, y + h);
+    ctx.moveTo(x + cl, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - cl);
+    ctx.stroke();
+
+    // Label pill
+    var text = p.class.toUpperCase() + ' ' + Math.round(p.score * 100) + '%';
+    var fontPx = 13 * k;
+    ctx.font = '800 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.textBaseline = 'middle';
+    var padX = 9 * k, pillH = 24 * k, gap = 6 * k;
+    var pillW = ctx.measureText(text).width + padX * 2;
+    var px = Math.max(0, Math.min(x, canvas.width - pillW));
+    var py = y - pillH - gap;
+    if (py < 0) py = Math.min(y + gap, canvas.height - pillH);
+
+    ctx.fillStyle = color;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 10 * k;
+    roundRect(px, py, pillW, pillH, pillH / 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = VOID;
+    ctx.fillText(text, px + padX, py + pillH / 2 + 0.5 * k);
+    ctx.restore();
+  }
+
+  function displayScale() {
+    // Video and canvas share object-fit: cover, so one scale factor maps canvas px -> screen px.
+    var r = viewport.getBoundingClientRect();
+    if (!canvas.width || !canvas.height || !r.width) return 1;
+    var s = Math.max(r.width / canvas.width, r.height / canvas.height);
+    return 1 / s; // k: canvas px per screen px, keeps strokes/fonts a constant on-screen size
+  }
+
+  /* ---------- Detection loop ---------- */
+  function loop() {
+    if (!running) return;
+    if (document.hidden || video.readyState < 2) {
+      rafId = requestAnimationFrame(loop);
+      return;
+    }
+    syncCanvas();
+    model.detect(video).then(function (preds) {
+      if (!running) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      var k = displayScale();
+      var shown = preds.filter(function (p) { return p.score >= MIN_SCORE; });
+      var anyHigh = false;
+      shown.forEach(function (p) { if (p.score > HIGH_SCORE) anyHigh = true; drawPrediction(p, k); });
+      setCount(shown.length, anyHigh);
+      rafId = requestAnimationFrame(loop);
+    }).catch(function (err) {
+      console.error(err);
+      if (running) rafId = requestAnimationFrame(loop);
+    });
+  }
+
+  function start() {
+    if (!model || running) return;
+    cta.disabled = true;
+    hint.textContent = 'Requesting camera access...';
+    startCamera().then(function () {
+      running = true;
+      placeholder.classList.add('hidden');
+      viewport.classList.add('active');
+      counter.classList.add('show');
+      setBadge('live', 'Detecting Live');
+      cta.textContent = 'Stop AI Vision';
+      cta.classList.add('stop');
+      cta.disabled = false;
+      hint.textContent = 'Green boxes = over 80% confidence. Cyan = 55-80%.';
+      lastCount = -1;
+      requestWakeLock();
+      loop();
+    }).catch(function (err) {
+      console.error(err);
+      stopCamera();
+      var msg = 'Could not start the camera.';
+      if (err && err.message === 'NO_MEDIA') msg = 'Camera API unavailable. Open this app over HTTPS.';
+      else if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) msg = 'Camera permission denied. Allow camera access in your browser settings.';
+      else if (err && (err.name === 'NotFoundError' || err.name === 'OverconstrainedError')) msg = 'No usable camera was found on this device.';
+      else if (err && err.name === 'NotReadableError') msg = 'Camera is busy in another app. Close it and try again.';
+      setBadge('error', 'Camera unavailable');
+      hint.textContent = msg;
+      placeholderText.textContent = msg;
+      cta.disabled = false;
+    });
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    stopCamera();
+    releaseWakeLock();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    viewport.classList.remove('active');
+    counter.classList.remove('show');
+    placeholder.classList.remove('hidden');
+    placeholderText.innerHTML = 'Tap <strong style="color:#FAFAFA">Start AI Vision</strong> to open the rear camera and detect objects in real time.';
+    setBadge('ready', 'AI Vision Ready');
+    cta.textContent = 'Start AI Vision';
+    cta.classList.remove('stop');
+    hint.textContent = 'Detects 80 everyday object types, fully on-device.';
+    lastCount = -1;
+  }
+
+  cta.addEventListener('click', function () { running ? stop() : start(); });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && running) requestWakeLock();
+  });
+
+  /* ---------- PWA ---------- */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('SW registration failed', e); });
+    });
+  }
+
+  loadModel();
+})();
+</script>
+</body>
+</html>
