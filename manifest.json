@@ -1,0 +1,20 @@
+{
+  "name": "VisionX AI",
+  "short_name": "VisionX",
+  "description": "Live camera AI object detector powered by TensorFlow.js and COCO-SSD.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
